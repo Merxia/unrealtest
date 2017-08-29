@@ -20,8 +20,7 @@ void ASPlayerCameraManager::UpdateCamera(float DeltaTime)
 	ASCharacter* MyPawn = PCOwner ? Cast<ASCharacter>(PCOwner->GetPawn()) : NULL;
 	if (MyPawn)
 	{
-		//const float TargetFOV = MyPawn->IsTargeting() ? TargetingFOV : NormalFOV;
-		const float TargetFOV = NormalFOV;
+		const float TargetFOV = MyPawn->IsTargeting() ? TargetingFOV : NormalFOV;
 		DefaultFOV = FMath::FInterpTo(DefaultFOV, TargetFOV, DeltaTime, 20.0f);
 		SetFOV(DefaultFOV);
 	}

@@ -14,7 +14,7 @@ class SURVIVAL_API USCharacterMovementComponent : public UCharacterMovementCompo
 {
 	GENERATED_BODY()
 	
-	//virtual float GetMaxSpeed() const override;
+	virtual float GetMaxSpeed() const override;
 	
 	
 };
