@@ -3,9 +3,11 @@
 #include "SCharacter.h"
 #include "SCharacterMovementComponent.h"
 #include "SUsableActor.h"
+#include "SHUD.h"
 
 #include "Runtime/Engine/Classes/GameFramework/SpringArmComponent.h"
 #include "Runtime/Engine/Classes/Camera/CameraComponent.h"
+#include "Engine.h"
 
 // Sets default values
 ASCharacter::ASCharacter(const class FObjectInitializer& ObjectInitializer)
@@ -48,6 +50,15 @@ ASCharacter::ASCharacter(const class FObjectInitializer& ObjectInitializer)
 	CriticalHungerThreshold = 90;
 	MaxHunger = 100;
 	Hunger = 0;
+}
+
+void ASCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	// Set a timer to increment hunger every interval
+	FTimerHandle Handle;
+	GetWorld()->GetTimerManager().SetTimer(Handle, this, &ASCharacter::IncrementHunger, IncrementHungerInterval, true);
 }
 
 // Called every frame
@@ -210,6 +221,89 @@ FRotator ASCharacter::GetAimOffsets() const
 	const FRotator AimRotLS = AimDirLS.Rotation();
 
 	return AimRotLS;
+}
+
+float ASCharacter::GetHealth() const
+{
+	return Health;
+}
+
+float ASCharacter::GetHunger() const
+{
+	return Hunger;
+}
+
+float ASCharacter::GetMaxHealth() const
+{
+	return GetClass()->GetDefaultObject<ASCharacter>()->Health;
+}
+
+float ASCharacter::GetMaxHunger() const
+{
+	return MaxHunger;
+}
+
+void ASCharacter::ConsumeFood(float AmountRestored)
+{
+	// Reduce Hunger, ensure we do not go outside of our bounds
+	Hunger = FMath::Clamp(Hunger - AmountRestored, 0.0f, GetMaxHunger());
+
+	// Restore Hitpoints
+	Health = FMath::Clamp(Health + AmountRestored, 0.0f, GetMaxHealth());
+
+	APlayerController* PC = Cast<APlayerController>(Controller);
+	if (PC)
+	{
+		ASHUD* MyHUD = Cast<ASHUD>(PC->GetHUD());
+		if (MyHUD)
+		{
+			MyHUD->MessageReceived("Food item consumed!");
+		}
+	}
+
+}
+
+bool ASCharacter::IsAlive() const
+{
+	return Health > 0;
+}
+
+void ASCharacter::IncrementHunger()
+{
+	Hunger = FMath::Clamp(Hunger + IncrementHungerAmount, 0.0f, GetMaxHunger());
+
+	if (Hunger > CriticalHungerThreshold)
+	{
+		// Apply damage to self.
+		// TODO: Set DamageType
+		TakeDamage(10.0f, FDamageEvent(), GetController(), this);
+	}
+}
+
+float ASCharacter::TakeDamage(float Damage, FDamageEvent const & DamageEvent, AController * EventInstigator, AActor * DamageCauser)
+{
+	if (Health <= 0.f)
+	{
+		return 0.f;
+	}
+
+	const float ActualDamage = Super::TakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
+	if (ActualDamage > 0.f)
+	{
+		Health -= ActualDamage;
+		if (Health <= 0)
+		{
+			// TODO: Handle death
+			//Die(ActualDamage, DamageEvent, EventInstigator, DamageCauser);
+		}
+		else
+		{
+			// TODO: Play hit
+			//PlayHit(ActualDamage, DamageEvent, EventInstigator->GetPawn(), DamageCauser, false);
+		}
+	}
+
+	return ActualDamage;
 }
 
 void ASCharacter::OnStartJump()

@@ -9,7 +9,7 @@ void ASurvivalGameModeBase::StartPlay()
 
 	if (GEngine) 
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Hello World"));
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Starting Game"));
 	}
 }
 

@@ -3,6 +3,8 @@
 #include "SUsableActor.h"
 #include "Runtime/Engine/Classes/Components/StaticMeshComponent.h"
 
+#include "Engine.h"
+
 
 ASUsableActor::ASUsableActor(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -13,7 +15,7 @@ ASUsableActor::ASUsableActor(const class FObjectInitializer& ObjectInitializer)
 
 void ASUsableActor::OnUsed(APawn* InstigatorPawn)
 {
-	// Nothing to do here...
+
 }
 
 

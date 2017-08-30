@@ -21,6 +21,8 @@ private:
 	class UCameraComponent* CameraComp;
 
 public:	
+
+	virtual void PostInitializeComponents() override;
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -119,6 +121,27 @@ public:
 	/* Hitpoints & Hunger                                                   */
 	/************************************************************************/
 
+	UFUNCTION(BlueprintCallable, Category = "PlayerCondition")
+	float GetHealth() const;
+
+	UFUNCTION(BlueprintCallable, Category = "PlayerCondition")
+	float GetHunger() const;
+
+	UFUNCTION(BlueprintCallable, Category = "PlayerCondition")
+	float GetMaxHealth() const;
+
+	UFUNCTION(BlueprintCallable, Category = "PlayerCondition")
+	float GetMaxHunger() const;
+
+	UFUNCTION(BlueprintCallable, Category = "PlayerCondition")
+	void ConsumeFood(float AmountRestored);
+
+	UFUNCTION(BlueprintCallable, Category = "PlayerCondition")
+	bool IsAlive() const;
+
+	/* Increments hunger, used by timer. */
+	void IncrementHunger();
+
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCondition")
 	float IncrementHungerInterval;
 
@@ -138,5 +161,7 @@ public:
 	// Documentation Note: MaxHunger does not need to be replicated, only values that change and are displayed or used by clients should ever be replicated.
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCondition")
 	float MaxHunger;
+
+	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, class AActor* DamageCauser) override;
 	
 };
