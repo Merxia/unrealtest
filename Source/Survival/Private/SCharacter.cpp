@@ -309,6 +309,8 @@ float ASCharacter::TakeDamage(float Damage, FDamageEvent const & DamageEvent, AC
 void ASCharacter::OnStartJump()
 {
 	bPressedJump = true;
+
+	SetIsJumping(true);
 }
 
 void ASCharacter::OnStopJump()
