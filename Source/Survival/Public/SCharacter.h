@@ -29,6 +29,8 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	void StopAllAnimMontages();
+
 	/************************************************************************/
 	/* Movement                                                             */
 	/************************************************************************/
@@ -162,6 +164,23 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCondition")
 	float MaxHunger;
 
+	/************************************************************************/
+	/* Damage, Hit & Death                                                  */
+	/************************************************************************/
+
 	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, class AActor* DamageCauser) override;
 	
+	virtual bool CanDie(float KillingDamage, FDamageEvent const& DamageEvent, AController* Killer, AActor* DamageCauser) const;
+
+	virtual bool Die(float KillingDamage, FDamageEvent const& DamageEvent, AController* Killer, AActor* DamageCauser);
+
+	virtual void OnDeath(float KillingDamage, FDamageEvent const& DamageEvent, APawn* PawnInstigator, AActor* DamageCauser);
+
+	virtual void FellOutOfWorld(const class UDamageType& DmgType) override;
+
+	void SetRagdollPhysics();
+
+	virtual void PlayHit(float DamageTaken, struct FDamageEvent const& DamageEvent, APawn* PawnInstigator, AActor* DamageCauser, bool bKilled);
+
+	bool bIsDying;
 };
