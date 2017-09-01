@@ -9,6 +9,8 @@
 #include "Runtime/Engine/Classes/Camera/CameraComponent.h"
 #include "Engine.h"
 
+#define print(text) if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 1.5, FColor::White,text)
+
 // Sets default values
 ASCharacter::ASCharacter(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<USCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -127,6 +129,15 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 }
 
+void ASCharacter::StopAllAnimMontages()
+{
+	USkeletalMeshComponent* UseMesh = GetMesh();
+	if (UseMesh && UseMesh->AnimScriptInstance)
+	{
+		UseMesh->AnimScriptInstance->Montage_Stop(0.0f);
+	}
+}
+
 void ASCharacter::MoveForward(float Val)
 {
 	if (Controller && Val != 0.f)
@@ -169,7 +180,7 @@ ASUsableActor* ASCharacter::GetUsableInView()
 	FCollisionQueryParams TraceParams(FName(TEXT("TraceUsableActor")), true, this);
 	TraceParams.bTraceAsyncScene = true;
 	TraceParams.bReturnPhysicalMaterial = false;
-	TraceParams.bTraceComplex = true;
+	TraceParams.bTraceComplex = false;
 
 	FHitResult Hit(ForceInit);
 	GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, TraceParams);
@@ -294,17 +305,130 @@ float ASCharacter::TakeDamage(float Damage, FDamageEvent const & DamageEvent, AC
 		if (Health <= 0)
 		{
 			// TODO: Handle death
-			//Die(ActualDamage, DamageEvent, EventInstigator, DamageCauser);
+			Die(ActualDamage, DamageEvent, EventInstigator, DamageCauser);
 		}
 		else
 		{
 			// TODO: Play hit
-			//PlayHit(ActualDamage, DamageEvent, EventInstigator->GetPawn(), DamageCauser, false);
+			APawn* Pawn = EventInstigator ? EventInstigator->GetPawn() : nullptr;
+			PlayHit(ActualDamage, DamageEvent, Pawn, DamageCauser, false);
 		}
 	}
 
 	return ActualDamage;
 }
+
+bool ASCharacter::CanDie(float KillingDamage, FDamageEvent const& DamageEvent, AController* Killer, AActor* DamageCauser) const
+{
+	/* Check if character is already dying or destroyed */
+	if (bIsDying ||
+		IsPendingKill() ||
+		GetWorld()->GetAuthGameMode() == NULL)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool ASCharacter::Die(float KillingDamage, FDamageEvent const& DamageEvent, AController* Killer, AActor* DamageCauser)
+{
+	if (!CanDie(KillingDamage, DamageEvent, Killer, DamageCauser)) 
+	{
+		return false;
+	}
+
+	Health = FMath::Min(0.0f, Health);
+
+	UDamageType const* const DamageType = DamageEvent.DamageTypeClass ? DamageEvent.DamageTypeClass->GetDefaultObject<UDamageType>() : GetDefault<UDamageType>();
+	Killer = GetDamageInstigator(Killer, *DamageType);
+
+	OnDeath(KillingDamage, DamageEvent, Killer ? Killer->GetPawn() : NULL, DamageCauser);
+	return true;
+}
+
+void ASCharacter::OnDeath(float KillingDamage, FDamageEvent const& DamageEvent, APawn* PawnInstigator, AActor* DamageCauser)
+{
+	if (bIsDying)
+	{
+		return;
+	}
+
+	bIsDying = true;
+
+	PlayHit(KillingDamage, DamageEvent, PawnInstigator, DamageCauser, true);
+
+	//DestroyInventory();
+
+	DetachFromControllerPendingDestroy();
+	StopAllAnimMontages();
+
+	/* Disable all collision on capsule */
+	UCapsuleComponent* CapsuleComp = GetCapsuleComponent();
+	CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	CapsuleComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+
+	USkeletalMeshComponent* Mesh3P = GetMesh();
+	if (Mesh3P)
+	{
+		Mesh3P->SetCollisionProfileName(TEXT("Ragdoll"));
+	}
+	SetActorEnableCollision(true);
+
+	SetRagdollPhysics();
+}
+
+void ASCharacter::FellOutOfWorld(const UDamageType & DmgType)
+{
+	Die(Health, FDamageEvent(DmgType.GetClass()), NULL, NULL);
+}
+
+
+void ASCharacter::SetRagdollPhysics()
+{
+	bool bInRagdoll = false;
+	USkeletalMeshComponent* Mesh3P = GetMesh();
+
+	if (IsPendingKill())
+	{
+		print("Is pending kill");
+		bInRagdoll = false;
+	}
+	else if (!Mesh3P || !Mesh3P->GetPhysicsAsset())
+	{
+		if (Mesh3P) {
+			print("Found mesh but can find physics asset");
+		}
+		bInRagdoll = false;
+	}
+	else
+	{
+		print("Setting ragdoll");
+		Mesh3P->SetAllBodiesSimulatePhysics(true);
+		Mesh3P->SetSimulatePhysics(true);
+		Mesh3P->WakeAllRigidBodies();
+		Mesh3P->bBlendPhysics = true;
+
+		bInRagdoll = true;
+	}
+
+	UCharacterMovementComponent* CharacterComp = Cast<UCharacterMovementComponent>(GetMovementComponent());
+	if (CharacterComp)
+	{
+		CharacterComp->StopMovementImmediately();
+		CharacterComp->DisableMovement();
+		CharacterComp->SetComponentTickEnabled(false);
+	}
+
+
+	SetLifeSpan(10.0f);
+}
+
+void ASCharacter::PlayHit(float DamageTaken, FDamageEvent const & DamageEvent, APawn * PawnInstigator, AActor * DamageCauser, bool bKilled)
+{
+
+}
+
 
 void ASCharacter::OnStartJump()
 {
